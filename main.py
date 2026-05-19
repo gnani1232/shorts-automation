@@ -140,11 +140,11 @@ while True:
                 print("VIDEO DOWNLOADED")
 
                 # =========================
-                # SKIP LARGE VIDEOS
+                # VIDEO SIZE CHECK
                 # =========================
 
                 if os.path.getsize(original_video) > 50000000:
-                    print("VIDEO TOO LARGE, SKIPPING")
+                    print("VIDEO TOO LARGE")
                     continue
 
                 # =========================
@@ -204,26 +204,39 @@ while True:
                 final_text = "\n".join(text_options)
 
                 # =========================
-                # CREATE YELLOW TEXT BOX
+                # CREATE YELLOW BOX
                 # =========================
 
-                img = Image.new("RGBA", (w, 220), (255, 230, 0, 235))
+                box_height = 220
+
+                img = Image.new(
+                    "RGBA",
+                    (w, box_height),
+                    (255, 230, 0, 235)
+                )
 
                 draw = ImageDraw.Draw(img)
 
-                font = ImageFont.load_default()
+                try:
+                    font = ImageFont.truetype(
+                        "arial.ttf",
+                        42
+                    )
+                except:
+                    font = ImageFont.load_default()
 
                 bbox = draw.multiline_textbbox(
                     (0, 0),
                     final_text,
-                    font=font
+                    font=font,
+                    spacing=12
                 )
 
                 text_width = bbox[2] - bbox[0]
                 text_height = bbox[3] - bbox[1]
 
                 x = (w - text_width) / 2
-                y = (220 - text_height) / 2
+                y = (box_height - text_height) / 2
 
                 draw.multiline_text(
                     (x, y),
@@ -231,7 +244,7 @@ while True:
                     font=font,
                     fill="black",
                     align="center",
-                    spacing=10
+                    spacing=12
                 )
 
                 yellow_box_path = f"{DOWNLOAD_FOLDER}/textbox.png"
@@ -239,13 +252,17 @@ while True:
                 img.save(yellow_box_path)
 
                 # =========================
-                # ADD TEXT BOX TO VIDEO
+                # ADD TEXT TO VIDEO
                 # =========================
 
-                text_clip = (
-                    ImageClip(yellow_box_path)
-                    .set_duration(clip.duration)
-                    .set_position(("center", h * 0.35))
+                text_clip = ImageClip(yellow_box_path)
+
+                text_clip = text_clip.with_duration(
+                    clip.duration
+                )
+
+                text_clip = text_clip.with_position(
+                    ("center", int(h * 0.35))
                 )
 
                 final_video = CompositeVideoClip([
@@ -253,7 +270,9 @@ while True:
                     text_clip
                 ])
 
-                edited_video = f"{DOWNLOAD_FOLDER}/edited_{safe_title}.mp4"
+                edited_video = (
+                    f"{DOWNLOAD_FOLDER}/edited_{safe_title}.mp4"
+                )
 
                 print("RENDERING VIDEO...")
 
@@ -270,10 +289,24 @@ while True:
                 print("TEXT ADDED SUCCESSFULLY")
 
                 # =========================
-                # YOUTUBE UPLOAD
+                # HASHTAGS
                 # =========================
 
-                hashtags = "#shorts #viral #trending #tollywood"
+                hashtags = """
+#shorts
+#viral
+#trending
+#tollywood
+#ramcharan
+#prabhas
+#alluarjun
+#ntr
+#maheshbabu
+"""
+
+                # =========================
+                # YOUTUBE UPLOAD
+                # =========================
 
                 request_body = {
                     "snippet": {
@@ -282,8 +315,8 @@ while True:
                         "tags": [
                             "shorts",
                             "viral",
-                            "tollywood",
-                            "trending"
+                            "trending",
+                            "tollywood"
                         ],
                         "categoryId": "24"
                     },
@@ -335,16 +368,20 @@ while True:
                 # =========================
 
                 print("WAITING 10 MINUTES BEFORE NEXT VIDEO...")
+
                 time.sleep(600)
 
             except Exception as e:
                 print(f"ERROR PROCESSING ROW {index}: {e}")
 
         print("ALL ROWS COMPLETED")
+
         print("WAITING 5 MINUTES...")
 
         time.sleep(300)
 
     except Exception as e:
+
         print(f"MAIN LOOP ERROR: {e}")
+
         time.sleep(300)
