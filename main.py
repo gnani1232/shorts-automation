@@ -149,7 +149,7 @@ def create_yellow_strip(text_lines, width):
     try:
         font = ImageFont.truetype(
             "arial.ttf",
-            95
+            170
         )
     except:
         font = ImageFont.load_default()
