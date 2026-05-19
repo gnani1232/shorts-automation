@@ -104,7 +104,7 @@ while True:
                 print(f"PROCESSING ROW {index}")
 
                 if len(row) < 3:
-                    print("ROW DOES NOT HAVE 3 COLUMNS")
+                    print("ROW DOES NOT HAVE REQUIRED COLUMNS")
                     continue
 
                 reel_url = row[0]
@@ -118,6 +118,33 @@ while True:
                 if status.upper() == "DONE":
                     print("SKIPPED DONE ROW")
                     continue
+
+                # =========================
+                # AUTO HASHTAGS FROM TITLE
+                # =========================
+
+                hashtags = title.lower().split()
+
+                hashtags = [
+                    tag.replace("#", "").strip()
+                    for tag in hashtags
+                ]
+
+                extra_tags = [
+                    "shorts",
+                    "viral",
+                    "trending",
+                    "fyp",
+                    "youtubeShorts"
+                ]
+
+                hashtags.extend(extra_tags)
+
+                hashtags = list(set(hashtags))
+
+                hashtags = hashtags[:15]
+
+                print(f"HASHTAGS: {hashtags}")
 
                 print(f"DOWNLOADING: {title}")
 
@@ -154,18 +181,19 @@ while True:
                 print(f"DOWNLOADED: {title}")
 
                 # =========================
-                # UPLOAD TO YOUTUBE
+                # YOUTUBE UPLOAD
                 # =========================
 
                 request_body = {
                     "snippet": {
                         "title": title,
                         "description": "#shorts",
-                        "tags": ["shorts"],
+                        "tags": hashtags,
                         "categoryId": "24"
                     },
                     "status": {
-                        "privacyStatus": "public"
+                        "privacyStatus": "public",
+                        "selfDeclaredMadeForKids": False
                     }
                 }
 
@@ -195,7 +223,7 @@ while True:
                 print(f"MARKED DONE: {title}")
 
                 # =========================
-                # DELETE FILE AFTER UPLOAD
+                # DELETE VIDEO AFTER UPLOAD
                 # =========================
 
                 if os.path.exists(video_file):
@@ -212,5 +240,5 @@ while True:
     except Exception as e:
         print(f"MAIN LOOP ERROR: {e}")
 
-    print("WAITING 5 MINUTES...")
+    print("WAITING 25 MINUTES...")
     time.sleep(1500)
