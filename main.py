@@ -124,9 +124,14 @@ while True:
 
                 print("DOWNLOADING VIDEO...")
 
+                # =========================
+                # INSTAGRAM DOWNLOAD
+                # =========================
+
                 ydl_opts = {
                     'outtmpl': original_video,
-                    'format': 'mp4'
+                    'format': 'mp4',
+                    'cookiefile': 'cookies.txt'
                 }
 
                 with YoutubeDL(ydl_opts) as ydl:
@@ -206,7 +211,6 @@ while True:
 
                 draw = ImageDraw.Draw(img)
 
-                # FIXED FONT ISSUE
                 font = ImageFont.load_default()
 
                 bbox = draw.multiline_textbbox(
@@ -327,10 +331,10 @@ while True:
                     pass
 
                 # =========================
-                # WAIT 25 MINUTES
+                # WAIT 10 MINUTES
                 # =========================
 
-                print("WAITING 25 MINUTES BEFORE NEXT VIDEO...")
+                print("WAITING 10 MINUTES BEFORE NEXT VIDEO...")
                 time.sleep(600)
 
             except Exception as e:
