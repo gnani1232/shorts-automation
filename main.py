@@ -391,7 +391,7 @@ while True:
                 # =========================
 
                 print("WAITING 10 MINUTES...")
-                time.sleep(600)
+                time.sleep(300)
 
             except Exception as e:
 
