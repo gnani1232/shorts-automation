@@ -206,7 +206,8 @@ while True:
 
                 draw = ImageDraw.Draw(img)
 
-                font = ImageFont.truetype("DejaVuSans-Bold.ttf", 45)
+                # FIXED FONT ISSUE
+                font = ImageFont.load_default()
 
                 bbox = draw.multiline_textbbox(
                     (0, 0),
