@@ -136,7 +136,9 @@ def create_yellow_strip(text_lines, width):
 
     final_text = "\n".join(text_lines)
 
-    box_height = 230
+    # YELLOW STRIP HEIGHT
+
+    box_height = 300
 
     img = Image.new(
         "RGBA",
@@ -146,15 +148,12 @@ def create_yellow_strip(text_lines, width):
 
     draw = ImageDraw.Draw(img)
 
-    
-    try:
-        font = ImageFont.truetype(
-        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
-        170
-    )
-    except:
-        font = ImageFont.load_default()
+    # BIG BOLD FONT
 
+    font = ImageFont.truetype(
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+        85
+    )
 
     bbox = draw.multiline_textbbox(
         (0, 0),
@@ -414,7 +413,7 @@ while True:
                 # =========================
 
                 print("WAITING 10 MINUTES...")
-                time.sleep(300)
+                time.sleep(600)
 
             except Exception as e:
 
