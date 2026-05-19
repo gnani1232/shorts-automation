@@ -1,64 +1,66 @@
 import os
-import json
-
-if os.getenv("GOOGLE_CREDENTIALS"):
-    with open("/tmp/credentials.json", "w") as f:
-        f.write(os.getenv("GOOGLE_CREDENTIALS"))
+import time
 
 from yt_dlp import YoutubeDL
 
 from google.oauth2.credentials import Credentials
-from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
+
+# =========================
+# GOOGLE TOKEN FROM RAILWAY
+# =========================
 
 SCOPES = [
     'https://www.googleapis.com/auth/spreadsheets',
     'https://www.googleapis.com/auth/youtube.upload'
 ]
 
+# Create token file from Railway variable
+if os.getenv("GOOGLE_TOKEN"):
+    with open("/tmp/token.json", "w") as f:
+        f.write(os.getenv("GOOGLE_TOKEN"))
+
+# Load credentials
+creds = Credentials.from_authorized_user_file(
+    "/tmp/token.json",
+    SCOPES
+)
+
+# Refresh token if expired
+if creds.expired and creds.refresh_token:
+    creds.refresh(Request())
+
+# =========================
+# GOOGLE SHEET CONFIG
+# =========================
+
 SPREADSHEET_ID = "1tUIsTtA8ZzvXNCFSXzOuCIqV8iofKvIRvPguJyjdHLM"
 RANGE_NAME = "Sheet1!A2:C"
+
+# =========================
+# DOWNLOAD FOLDER
+# =========================
 
 DOWNLOAD_FOLDER = "downloads"
 
 if not os.path.exists(DOWNLOAD_FOLDER):
     os.makedirs(DOWNLOAD_FOLDER)
 
-creds = None
+# =========================
+# GOOGLE SERVICES
+# =========================
 
-# Load existing token
-if os.path.exists('token.json'):
-    creds = Credentials.from_authorized_user_file(
-        'token.json',
-        SCOPES
-    )
-
-# If no token, login with Google
-if not creds or not creds.valid:
-
-    if creds and creds.expired and creds.refresh_token:
-        creds.refresh(Request())
-
-    else:
-        flow = InstalledAppFlow.from_client_secrets_file(
-            '/tmp/credentials.json',
-            SCOPES
-        )
-
-        creds = flow.run_local_server(port=0)
-
-    with open('token.json', 'w') as token:
-        token.write(creds.to_json())
-
-# Google APIs
 sheet_service = build('sheets', 'v4', credentials=creds)
 youtube = build('youtube', 'v3', credentials=creds)
 
 sheet = sheet_service.spreadsheets()
 
-# Read sheet
+# =========================
+# READ GOOGLE SHEET
+# =========================
+
 result = sheet.values().get(
     spreadsheetId=SPREADSHEET_ID,
     range=RANGE_NAME
@@ -70,21 +72,34 @@ if not values:
     print("No data found.")
     exit()
 
-# Process rows
+# =========================
+# PROCESS EACH ROW
+# =========================
+
 for index, row in enumerate(values, start=2):
 
     try:
+
         reel_url = row[0]
         title = row[1]
         status = row[2]
 
+        # Skip completed rows
         if status.upper() == "DONE":
             continue
 
         print(f"Downloading: {title}")
 
+        # =========================
+        # DOWNLOAD VIDEO
+        # =========================
+
+        safe_title = title.replace("/", "_").replace("\\", "_")
+
+        video_file = f"{DOWNLOAD_FOLDER}/{safe_title}.mp4"
+
         ydl_opts = {
-            'outtmpl': f'{DOWNLOAD_FOLDER}/{title}.mp4',
+            'outtmpl': video_file,
             'format': 'mp4'
         }
 
@@ -93,7 +108,9 @@ for index, row in enumerate(values, start=2):
 
         print(f"Downloaded: {title}")
 
-        video_file = f"{DOWNLOAD_FOLDER}/{title}.mp4"
+        # =========================
+        # UPLOAD TO YOUTUBE
+        # =========================
 
         request_body = {
             "snippet": {
@@ -117,7 +134,10 @@ for index, row in enumerate(values, start=2):
 
         print(f"Uploaded to YouTube: {title}")
 
-        # Mark DONE in sheet
+        # =========================
+        # MARK DONE IN SHEET
+        # =========================
+
         sheet.values().update(
             spreadsheetId=SPREADSHEET_ID,
             range=f"Sheet1!C{index}",
@@ -132,4 +152,4 @@ for index, row in enumerate(values, start=2):
         time.sleep(3)
 
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"Error processing row {index}: {e}")
