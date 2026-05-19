@@ -73,6 +73,118 @@ sheet = sheet_service.spreadsheets()
 print("GOOGLE SERVICES CONNECTED")
 
 # =========================
+# TEXT GENERATOR
+# =========================
+
+def get_text_from_title(title):
+
+    title_lower = title.lower()
+
+    if "prabhas" in title_lower:
+
+        return [
+            "REBEL STAR PRABHAS !!",
+            "BAHUBALI HERO !!",
+            "BOX OFFICE KING !!"
+        ]
+
+    elif "ram charan" in title_lower:
+
+        return [
+            "GLOBAL STAR RAM CHARAN !!",
+            "MEGA POWER HERO !!",
+            "PEDDI BLOCKBUSTER !!"
+        ]
+
+    elif "allu arjun" in title_lower:
+
+        return [
+            "ICON STAR ALLU ARJUN !!",
+            "PUSHPA RULE !!",
+            "NATIONAL CRUSH HERO !!"
+        ]
+
+    elif "ntr" in title_lower:
+
+        return [
+            "MAN OF MASSES NTR !!",
+            "RRR HERO !!",
+            "BOX OFFICE BLAST !!"
+        ]
+
+    elif "mahesh" in title_lower:
+
+        return [
+            "SUPER STAR MAHESH BABU !!",
+            "TELUGU KING !!",
+            "GOOSEBUMPS ENTRY !!"
+        ]
+
+    else:
+
+        return [
+            title.upper() + " !!",
+            "BLOCKBUSTER FEEL !!",
+            "FANS CELEBRATION !!"
+        ]
+
+# =========================
+# CREATE YELLOW STRIP
+# =========================
+
+def create_yellow_strip(text_lines, width):
+
+    final_text = "\n".join(text_lines)
+
+    box_height = 230
+
+    img = Image.new(
+        "RGBA",
+        (width, box_height),
+        (255, 230, 0, 230)
+    )
+
+    draw = ImageDraw.Draw(img)
+
+    try:
+        font = ImageFont.truetype(
+            "arial.ttf",
+            62
+        )
+    except:
+        font = ImageFont.load_default()
+
+    bbox = draw.multiline_textbbox(
+        (0, 0),
+        final_text,
+        font=font,
+        spacing=18
+    )
+
+    text_width = bbox[2] - bbox[0]
+    text_height = bbox[3] - bbox[1]
+
+    x = (width - text_width) / 2
+    y = (box_height - text_height) / 2
+
+    draw.multiline_text(
+        (x, y),
+        final_text,
+        font=font,
+        fill="black",
+        align="center",
+        spacing=18
+    )
+
+    yellow_strip_path = (
+        f"{DOWNLOAD_FOLDER}/textbox.png"
+    )
+
+    img.save(yellow_strip_path)
+
+    return yellow_strip_path
+
+# =========================
 # MAIN LOOP
 # =========================
 
@@ -165,114 +277,23 @@ while True:
                 # AUTO GENERATED TEXT
                 # =========================
 
-                title_lower = title.lower()
-
-                if "prabhas" in title_lower:
-
-                    text_lines = [
-                        "REBEL STAR PRABHAS 🔥",
-                        "BAHUBALI HERO 😍",
-                        "BOX OFFICE KING 💥"
-                    ]
-
-                elif "ram charan" in title_lower:
-
-                    text_lines = [
-                        "GLOBAL STAR RAM CHARAN 🔥",
-                        "MEGA POWER HERO 😍",
-                        "PEDDI BLOCKBUSTER 💥"
-                    ]
-
-                elif "allu arjun" in title_lower:
-
-                    text_lines = [
-                        "ICON STAR ALLU ARJUN 🔥",
-                        "PUSHPA RULE 😍",
-                        "NATIONAL CRUSH HERO 💥"
-                    ]
-
-                elif "ntr" in title_lower:
-
-                    text_lines = [
-                        "MAN OF MASSES NTR 🔥",
-                        "RRR HERO 😍",
-                        "BOX OFFICE BLAST 💥"
-                    ]
-
-                elif "mahesh" in title_lower:
-
-                    text_lines = [
-                        "SUPER STAR MAHESH BABU 🔥",
-                        "TELUGU KING 😍",
-                        "GOOSEBUMPS ENTRY 💥"
-                    ]
-
-                else:
-
-                    text_lines = [
-                        title.upper(),
-                        "BLOCKBUSTER FEEL 🔥",
-                        "FANS CELEBRATION 😍"
-                    ]
-
-                final_text = "\n".join(text_lines)
+                text_lines = get_text_from_title(title)
 
                 # =========================
-                # CREATE YELLOW STRIP
+                # CREATE TEXT STRIP
                 # =========================
 
-                box_height = 85
-
-                img = Image.new(
-                    "RGBA",
-                    (w, box_height),
-                    (255, 230, 0, 220)
+                yellow_strip_path = create_yellow_strip(
+                    text_lines,
+                    w
                 )
-
-                draw = ImageDraw.Draw(img)
-
-                try:
-                    font = ImageFont.truetype(
-                        "arial.ttf",
-                        30
-                    )
-                except:
-                    font = ImageFont.load_default()
-
-                bbox = draw.multiline_textbbox(
-                    (0, 0),
-                    final_text,
-                    font=font,
-                    spacing=5
-                )
-
-                text_width = bbox[2] - bbox[0]
-                text_height = bbox[3] - bbox[1]
-
-                x = (w - text_width) / 2
-                y = (box_height - text_height) / 2
-
-                draw.multiline_text(
-                    (x, y),
-                    final_text,
-                    font=font,
-                    fill="black",
-                    align="center",
-                    spacing=5
-                )
-
-                yellow_box_path = (
-                    f"{DOWNLOAD_FOLDER}/textbox.png"
-                )
-
-                img.save(yellow_box_path)
 
                 # =========================
                 # ADD TEXT TO VIDEO
                 # =========================
 
                 text_clip = ImageClip(
-                    yellow_box_path
+                    yellow_strip_path
                 )
 
                 text_clip = text_clip.with_duration(
@@ -302,7 +323,7 @@ while True:
                     audio_codec="aac",
                     preset="ultrafast",
                     threads=2,
-                    bitrate="2000k",
+                    bitrate="2500k",
                     fps=24
                 )
 
@@ -380,7 +401,7 @@ while True:
                 try:
                     os.remove(original_video)
                     os.remove(edited_video)
-                    os.remove(yellow_box_path)
+                    os.remove(yellow_strip_path)
                 except:
                     pass
 
