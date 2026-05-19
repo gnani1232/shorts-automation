@@ -174,6 +174,6 @@ for index, row in enumerate(values, start=2):
     except Exception as e:
         print(f"ERROR PROCESSING ROW {index}: {e}")
 
-        while True:
-    print("BOT RUNNING...")
-    time.sleep(300)
+    while True:
+        print("BOT RUNNING...")
+        time.sleep(300)
