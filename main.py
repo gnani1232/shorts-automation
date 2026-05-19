@@ -4,156 +4,111 @@ import random
 
 from yt_dlp import YoutubeDL
 
+from moviepy import (
+    VideoFileClip,
+    TextClip,
+    CompositeVideoClip
+)
+
 from google.oauth2.credentials import Credentials
 from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
 
-from moviepy.editor import *
-
 print("SCRIPT STARTED")
 
-# =========================
-# GOOGLE TOKEN FROM RAILWAY
-# =========================
+# ==========================================
+# GOOGLE TOKEN FROM RAILWAY VARIABLE
+# ==========================================
 
 SCOPES = [
     'https://www.googleapis.com/auth/spreadsheets',
     'https://www.googleapis.com/auth/youtube.upload'
 ]
 
-# Create token file from Railway variable
 if os.getenv("GOOGLE_TOKEN"):
     with open("/tmp/token.json", "w") as f:
         f.write(os.getenv("GOOGLE_TOKEN"))
 
 print("TOKEN FILE CREATED")
 
-# Load credentials
 creds = Credentials.from_authorized_user_file(
     "/tmp/token.json",
     SCOPES
 )
 
-print("CREDENTIALS LOADED")
-
-# Refresh token if expired
 if creds.expired and creds.refresh_token:
     creds.refresh(Request())
     print("TOKEN REFRESHED")
 
-# =========================
-# GOOGLE SHEET CONFIG
-# =========================
+print("GOOGLE LOGIN SUCCESS")
+
+# ==========================================
+# GOOGLE SHEETS CONFIG
+# ==========================================
 
 SPREADSHEET_ID = "1tUIsTtA8ZzvXNCFSXzOuCIqV8iofKvIRvPguJyjdHLM"
 RANGE_NAME = "Sheet1!A2:C"
 
-# =========================
+# ==========================================
 # DOWNLOAD FOLDER
-# =========================
+# ==========================================
 
 DOWNLOAD_FOLDER = "downloads"
 
 if not os.path.exists(DOWNLOAD_FOLDER):
     os.makedirs(DOWNLOAD_FOLDER)
 
-print("DOWNLOAD FOLDER READY")
-
-# =========================
+# ==========================================
 # GOOGLE SERVICES
-# =========================
+# ==========================================
 
 sheet_service = build('sheets', 'v4', credentials=creds)
 youtube = build('youtube', 'v3', credentials=creds)
 
 sheet = sheet_service.spreadsheets()
 
-print("GOOGLE SERVICES CONNECTED")
+print("GOOGLE SERVICES READY")
 
-# =========================
-# AUTO TEXT GENERATOR
-# =========================
+# ==========================================
+# AUTO CAPTIONS
+# ==========================================
 
-def generate_hook(title):
+caption_templates = [
+    "I wish they stay together forever 😍🔥",
+    "Best couple on internet ❤️✨",
+    "Tell your wishes in comments 🔥",
+    "This moment feels magical 😍",
+    "Internet favorite pair ❤️",
+    "Pure happiness together 🥺❤️",
+    "Couple goals literally 😍",
+    "Their chemistry is unreal 🔥",
+    "Manifesting this love forever ❤️",
+    "Most wholesome video today 😭❤️"
+]
 
-    hooks = [
-        f"{title} 😍",
-        f"Can't stop watching this ❤️",
-        f"Beautiful moments forever ✨",
-        f"Fans are loving this 🔥",
-        f"Pure happiness 🥺❤️",
-        f"This looks straight out of a movie 😍",
-        f"Couple goals forever 💕",
-        f"Internet is obsessed with this ✨"
-    ]
+hashtags_pool = [
+    "#shorts",
+    "#viral",
+    "#couple",
+    "#love",
+    "#trending",
+    "#instagram",
+    "#reels",
+    "#ytshorts",
+    "#romantic",
+    "#viralshorts"
+]
 
-    return random.choice(hooks)
-
-# =========================
-# VIDEO TEXT OVERLAY
-# =========================
-
-def add_text_overlay(input_video, output_video, title):
-
-    clip = VideoFileClip(input_video)
-
-    hook_text = generate_hook(title)
-
-    bottom_text = random.choice([
-        "Comment your thoughts 🔥",
-        "What do you think? ❤️",
-        "Drop your reaction 😍",
-        "Fans are going crazy 🔥",
-        "Would you watch this again? 👀"
-    ])
-
-    # MAIN TEXT
-    text1 = TextClip(
-        hook_text,
-        fontsize=60,
-        color='yellow',
-        stroke_color='black',
-        stroke_width=3,
-        font='Arial-Bold',
-        method='caption',
-        size=(900, None)
-    )
-
-    # Slightly below middle
-    text1 = text1.set_position(("center", 850)).set_duration(clip.duration)
-
-    # SECOND TEXT
-    text2 = TextClip(
-        bottom_text,
-        fontsize=45,
-        color='white',
-        stroke_color='black',
-        stroke_width=2,
-        font='Arial-Bold',
-        method='caption',
-        size=(900, None)
-    )
-
-    text2 = text2.set_position(("center", 940)).set_duration(clip.duration)
-
-    final = CompositeVideoClip([clip, text1, text2])
-
-    final.write_videofile(
-        output_video,
-        codec="libx264",
-        audio_codec="aac"
-    )
-
-# =========================
-# MAIN BOT LOOP
-# =========================
+# ==========================================
+# MAIN LOOP
+# ==========================================
 
 while True:
 
-    try:
+    print("CHECKING GOOGLE SHEET...")
 
-        print("CHECKING SHEET...")
+    try:
 
         result = sheet.values().get(
             spreadsheetId=SPREADSHEET_ID,
@@ -162,124 +117,105 @@ while True:
 
         values = result.get('values', [])
 
-        print("SHEET VALUES:")
-        print(values)
-
         if not values:
             print("NO DATA FOUND")
-            time.sleep(60)
+            time.sleep(1500)
             continue
 
-        # =========================
-        # PROCESS EACH ROW
-        # =========================
+        # ==========================================
+        # PROCESS ROWS
+        # ==========================================
 
         for index, row in enumerate(values, start=2):
 
             try:
 
-                print(f"PROCESSING ROW {index}")
-
-                if len(row) < 3:
-                    print("ROW DOES NOT HAVE REQUIRED COLUMNS")
-                    continue
-
                 reel_url = row[0]
                 title = row[1]
                 status = row[2]
 
-                print(f"TITLE: {title}")
-                print(f"STATUS: {status}")
+                print(f"PROCESSING: {title}")
 
-                # Skip completed rows
                 if status.upper() == "DONE":
-                    print("SKIPPED DONE ROW")
+                    print("ALREADY DONE")
                     continue
 
-                # =========================
-                # AUTO HASHTAGS
-                # =========================
-
-                hashtags = title.lower().split()
-
-                hashtags = [
-                    tag.replace("#", "").strip()
-                    for tag in hashtags
-                ]
-
-                extra_tags = [
-                    "shorts",
-                    "viral",
-                    "trending",
-                    "fyp",
-                    "youtubeShorts"
-                ]
-
-                hashtags.extend(extra_tags)
-
-                hashtags = list(set(hashtags))
-
-                hashtags = hashtags[:15]
-
-                print(f"HASHTAGS: {hashtags}")
-
-                print(f"DOWNLOADING: {title}")
-
-                # =========================
-                # SAFE FILE NAME
-                # =========================
-
-                safe_title = (
-                    title.replace("/", "_")
-                    .replace("\\", "_")
-                    .replace(":", "_")
-                    .replace("*", "_")
-                    .replace("?", "_")
-                    .replace('"', "_")
-                    .replace("<", "_")
-                    .replace(">", "_")
-                    .replace("|", "_")
-                )
-
-                video_file = f"{DOWNLOAD_FOLDER}/{safe_title}.mp4"
-
-                # =========================
+                # ==========================================
                 # DOWNLOAD VIDEO
-                # =========================
+                # ==========================================
+
+                safe_title = title.replace("/", "_").replace("\\", "_")
+
+                original_video = f"{DOWNLOAD_FOLDER}/{safe_title}.mp4"
 
                 ydl_opts = {
-                    'outtmpl': video_file,
+                    'outtmpl': original_video,
                     'format': 'mp4'
                 }
 
                 with YoutubeDL(ydl_opts) as ydl:
                     ydl.download([reel_url])
 
-                print(f"DOWNLOADED: {title}")
+                print("VIDEO DOWNLOADED")
 
-                # =========================
-                # ADD TEXT OVERLAY
-                # =========================
+                # ==========================================
+                # GENERATE AUTO TEXT
+                # ==========================================
+
+                random_caption = random.choice(caption_templates)
+
+                random_hashtags = " ".join(
+                    random.sample(hashtags_pool, 5)
+                )
+
+                full_caption = f"{random_caption}\n\n{random_hashtags}"
+
+                # ==========================================
+                # ADD TEXT TO VIDEO
+                # ==========================================
+
+                clip = VideoFileClip(original_video)
+
+                text_clip = TextClip(
+                    text=random_caption,
+                    font_size=60,
+                    color='yellow',
+                    stroke_color='black',
+                    stroke_width=3,
+                    method='caption',
+                    size=(900, None)
+                )
+
+                text_clip = (
+                    text_clip
+                    .with_position(("center", 900))
+                    .with_duration(clip.duration)
+                )
+
+                final_video = CompositeVideoClip([
+                    clip,
+                    text_clip
+                ])
 
                 edited_video = f"{DOWNLOAD_FOLDER}/edited_{safe_title}.mp4"
 
-                add_text_overlay(
-                    video_file,
+                final_video.write_videofile(
                     edited_video,
-                    title
+                    codec="libx264",
+                    audio_codec="aac"
                 )
 
-                print("TEXT OVERLAY ADDED")
+                print("TEXT ADDED TO VIDEO")
 
-                # =========================
-                # YOUTUBE UPLOAD
-                # =========================
+                # ==========================================
+                # UPLOAD TO YOUTUBE
+                # ==========================================
 
                 request_body = {
                     "snippet": {
                         "title": title,
-                        "description": "#shorts",
-                        "tags": hashtags,
+                        "description": full_caption,
+                        "tags": hashtags_pool,
                         "categoryId": "24"
                     },
                     "status": {
@@ -296,11 +232,11 @@ while True:
                     media_body=media
                 ).execute()
 
-                print(f"UPLOADED TO YOUTUBE: {title}")
+                print("UPLOADED TO YOUTUBE")
 
-                # =========================
-                # MARK DONE IN SHEET
-                # =========================
+                # ==========================================
+                # MARK DONE
+                # ==========================================
 
                 sheet.values().update(
                     spreadsheetId=SPREADSHEET_ID,
@@ -311,29 +247,27 @@ while True:
                     }
                 ).execute()
 
-                print(f"MARKED DONE: {title}")
+                print("MARKED DONE")
 
-                # =========================
+                # ==========================================
                 # DELETE FILES
-                # =========================
+                # ==========================================
 
-                if os.path.exists(video_file):
-                    os.remove(video_file)
+                os.remove(original_video)
+                os.remove(edited_video)
 
-                if os.path.exists(edited_video):
-                    os.remove(edited_video)
-
-                print("VIDEO FILES DELETED")
+                print("FILES DELETED")
 
                 time.sleep(5)
 
             except Exception as e:
-                print(f"ERROR PROCESSING ROW {index}: {e}")
+                print(f"ERROR IN ROW {index}: {e}")
 
         print("ALL ROWS COMPLETED")
+        print("WAITING 25 MINUTES...")
 
-    except Exception as e:
-        print(f"MAIN LOOP ERROR: {e}")
+        time.sleep(1500)
 
-    print("WAITING 25 MINUTES...")
-    time.sleep(1500)
+    except Exception as main_error:
+        print(f"MAIN ERROR: {main_error}")
+        time.sleep(300)
