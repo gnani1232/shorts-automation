@@ -1,6 +1,5 @@
 import os
 import time
-import random
 
 from yt_dlp import YoutubeDL
 
@@ -15,7 +14,7 @@ from PIL import Image, ImageDraw, ImageFont
 print("SCRIPT STARTED")
 
 # =========================
-# GOOGLE TOKEN FROM RAILWAY
+# GOOGLE TOKEN
 # =========================
 
 SCOPES = [
@@ -27,21 +26,18 @@ if os.getenv("GOOGLE_TOKEN"):
     with open("/tmp/token.json", "w") as f:
         f.write(os.getenv("GOOGLE_TOKEN"))
 
-print("TOKEN FILE CREATED")
-
 creds = Credentials.from_authorized_user_file(
     "/tmp/token.json",
     SCOPES
 )
 
-print("CREDENTIALS LOADED")
-
 if creds.expired and creds.refresh_token:
     creds.refresh(Request())
-    print("TOKEN REFRESHED")
+
+print("GOOGLE AUTH READY")
 
 # =========================
-# GOOGLE SHEET CONFIG
+# SHEET CONFIG
 # =========================
 
 SPREADSHEET_ID = "1tUIsTtA8ZzvXNCFSXzOuCIqV8iofKvIRvPguJyjdHLM"
@@ -56,14 +52,21 @@ DOWNLOAD_FOLDER = "downloads"
 if not os.path.exists(DOWNLOAD_FOLDER):
     os.makedirs(DOWNLOAD_FOLDER)
 
-print("DOWNLOAD FOLDER READY")
-
 # =========================
 # GOOGLE SERVICES
 # =========================
 
-sheet_service = build('sheets', 'v4', credentials=creds)
-youtube = build('youtube', 'v3', credentials=creds)
+sheet_service = build(
+    'sheets',
+    'v4',
+    credentials=creds
+)
+
+youtube = build(
+    'youtube',
+    'v3',
+    credentials=creds
+)
 
 sheet = sheet_service.spreadsheets()
 
@@ -104,7 +107,7 @@ while True:
                 print(f"PROCESSING ROW {index}")
 
                 if len(row) < 3:
-                    print("ROW INCOMPLETE")
+                    print("INVALID ROW")
                     continue
 
                 reel_url = row[0]
@@ -118,15 +121,21 @@ while True:
                     print("SKIPPED DONE ROW")
                     continue
 
-                safe_title = title.replace("/", "_").replace("\\", "_")
+                safe_title = (
+                    title
+                    .replace("/", "_")
+                    .replace("\\", "_")
+                )
 
-                original_video = f"{DOWNLOAD_FOLDER}/{safe_title}.mp4"
+                original_video = (
+                    f"{DOWNLOAD_FOLDER}/{safe_title}.mp4"
+                )
+
+                # =========================
+                # DOWNLOAD VIDEO
+                # =========================
 
                 print("DOWNLOADING VIDEO...")
-
-                # =========================
-                # INSTAGRAM DOWNLOAD
-                # =========================
 
                 ydl_opts = {
                     'outtmpl': original_video,
@@ -140,79 +149,84 @@ while True:
                 print("VIDEO DOWNLOADED")
 
                 # =========================
-                # VIDEO SIZE CHECK
-                # =========================
-
-                if os.path.getsize(original_video) > 50000000:
-                    print("VIDEO TOO LARGE")
-                    continue
-
-                # =========================
                 # VIDEO EDITING
                 # =========================
 
                 clip = VideoFileClip(original_video)
 
+                # ONLY FIRST 18 SECONDS
+
+                if clip.duration > 18:
+                    clip = clip.subclipped(0, 18)
+
                 w, h = clip.size
+
+                # =========================
+                # AUTO GENERATED TEXT
+                # =========================
 
                 title_lower = title.lower()
 
-                text_options = []
-
                 if "prabhas" in title_lower:
-                    text_options = [
+
+                    text_lines = [
                         "REBEL STAR PRABHAS 🔥",
                         "BAHUBALI HERO 😍",
                         "BOX OFFICE KING 💥"
                     ]
 
                 elif "ram charan" in title_lower:
-                    text_options = [
+
+                    text_lines = [
                         "GLOBAL STAR RAM CHARAN 🔥",
                         "MEGA POWER HERO 😍",
                         "PEDDI BLOCKBUSTER 💥"
                     ]
 
-                elif "mahesh" in title_lower:
-                    text_options = [
-                        "SUPER STAR MAHESH BABU 🔥",
-                        "TELUGU KING 😍",
-                        "GOOSEBUMPS ENTRY 💥"
-                    ]
-
-                elif "ntr" in title_lower:
-                    text_options = [
-                        "MAN OF MASSES NTR 🔥",
-                        "RRR HERO 😍",
-                        "BOX OFFICE BLAST 💥"
-                    ]
-
                 elif "allu arjun" in title_lower:
-                    text_options = [
+
+                    text_lines = [
                         "ICON STAR ALLU ARJUN 🔥",
                         "PUSHPA RULE 😍",
                         "NATIONAL CRUSH HERO 💥"
                     ]
 
+                elif "ntr" in title_lower:
+
+                    text_lines = [
+                        "MAN OF MASSES NTR 🔥",
+                        "RRR HERO 😍",
+                        "BOX OFFICE BLAST 💥"
+                    ]
+
+                elif "mahesh" in title_lower:
+
+                    text_lines = [
+                        "SUPER STAR MAHESH BABU 🔥",
+                        "TELUGU KING 😍",
+                        "GOOSEBUMPS ENTRY 💥"
+                    ]
+
                 else:
-                    text_options = [
+
+                    text_lines = [
                         title.upper(),
                         "BLOCKBUSTER FEEL 🔥",
                         "FANS CELEBRATION 😍"
                     ]
 
-                final_text = "\n".join(text_options)
+                final_text = "\n".join(text_lines)
 
                 # =========================
-                # CREATE YELLOW BOX
+                # CREATE YELLOW STRIP
                 # =========================
 
-                box_height = 220
+                box_height = 85
 
                 img = Image.new(
                     "RGBA",
                     (w, box_height),
-                    (255, 230, 0, 235)
+                    (255, 230, 0, 220)
                 )
 
                 draw = ImageDraw.Draw(img)
@@ -220,7 +234,7 @@ while True:
                 try:
                     font = ImageFont.truetype(
                         "arial.ttf",
-                        42
+                        30
                     )
                 except:
                     font = ImageFont.load_default()
@@ -229,7 +243,7 @@ while True:
                     (0, 0),
                     final_text,
                     font=font,
-                    spacing=12
+                    spacing=5
                 )
 
                 text_width = bbox[2] - bbox[0]
@@ -244,10 +258,12 @@ while True:
                     font=font,
                     fill="black",
                     align="center",
-                    spacing=12
+                    spacing=5
                 )
 
-                yellow_box_path = f"{DOWNLOAD_FOLDER}/textbox.png"
+                yellow_box_path = (
+                    f"{DOWNLOAD_FOLDER}/textbox.png"
+                )
 
                 img.save(yellow_box_path)
 
@@ -255,14 +271,18 @@ while True:
                 # ADD TEXT TO VIDEO
                 # =========================
 
-                text_clip = ImageClip(yellow_box_path)
+                text_clip = ImageClip(
+                    yellow_box_path
+                )
 
                 text_clip = text_clip.with_duration(
                     clip.duration
                 )
 
+                # LEVEL 3-4 FROM BOTTOM
+
                 text_clip = text_clip.with_position(
-                    ("center", int(h * 0.35))
+                    ("center", int(h * 0.68))
                 )
 
                 final_video = CompositeVideoClip([
@@ -305,7 +325,7 @@ while True:
 """
 
                 # =========================
-                # YOUTUBE UPLOAD
+                # UPLOAD TO YOUTUBE
                 # =========================
 
                 request_body = {
@@ -326,7 +346,9 @@ while True:
                     }
                 }
 
-                media = MediaFileUpload(edited_video)
+                media = MediaFileUpload(
+                    edited_video
+                )
 
                 youtube.videos().insert(
                     part="snippet,status",
@@ -334,7 +356,7 @@ while True:
                     media_body=media
                 ).execute()
 
-                print(f"UPLOADED TO YOUTUBE: {title}")
+                print("VIDEO UPLOADED")
 
                 # =========================
                 # MARK DONE
@@ -349,7 +371,7 @@ while True:
                     }
                 ).execute()
 
-                print("MARKED DONE")
+                print("MARKED AS DONE")
 
                 # =========================
                 # DELETE FILES
@@ -359,23 +381,25 @@ while True:
                     os.remove(original_video)
                     os.remove(edited_video)
                     os.remove(yellow_box_path)
-                    print("FILES DELETED")
                 except:
                     pass
+
+                print("FILES DELETED")
 
                 # =========================
                 # WAIT 10 MINUTES
                 # =========================
 
-                print("WAITING 10 MINUTES BEFORE NEXT VIDEO...")
-
+                print("WAITING 10 MINUTES...")
                 time.sleep(600)
 
             except Exception as e:
-                print(f"ERROR PROCESSING ROW {index}: {e}")
+
+                print(
+                    f"ERROR PROCESSING ROW {index}: {e}"
+                )
 
         print("ALL ROWS COMPLETED")
-
         print("WAITING 5 MINUTES...")
 
         time.sleep(300)
