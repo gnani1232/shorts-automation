@@ -1,10 +1,6 @@
 import os
 import time
-import json
 
-if os.getenv("GOOGLE_CREDENTIALS"):
-    with open("/tmp/credentials.json", "w") as f:
-        f.write(os.getenv("GOOGLE_CREDENTIALS"))
 from yt_dlp import YoutubeDL
 
 from google.oauth2.credentials import Credentials
@@ -28,27 +24,37 @@ if not os.path.exists(DOWNLOAD_FOLDER):
 
 creds = None
 
+# Load existing token
 if os.path.exists('token.json'):
-    creds = Credentials.from_authorized_user_file('token.json', SCOPES)
-
-if os.path.exists('token.json'):
-    creds = Credentials.from_authorized_user_file('token.json', SCOPES)
-else:
-    flow = InstalledAppFlow.from_client_secrets_file(
-        '/tmp/credentials.json',
+    creds = Credentials.from_authorized_user_file(
+        'token.json',
         SCOPES
     )
 
-    creds = flow.run_local_server(port=0)
+# If no token, login with Google
+if not creds or not creds.valid:
+
+    if creds and creds.expired and creds.refresh_token:
+        creds.refresh(Request())
+
+    else:
+        flow = InstalledAppFlow.from_client_secrets_file(
+            'credentials.json',
+            SCOPES
+        )
+
+        creds = flow.run_local_server(port=0)
 
     with open('token.json', 'w') as token:
         token.write(creds.to_json())
 
+# Google APIs
 sheet_service = build('sheets', 'v4', credentials=creds)
-youtube = build("youtube", "v3", credentials=creds)
+youtube = build('youtube', 'v3', credentials=creds)
 
 sheet = sheet_service.spreadsheets()
 
+# Read sheet
 result = sheet.values().get(
     spreadsheetId=SPREADSHEET_ID,
     range=RANGE_NAME
@@ -60,6 +66,7 @@ if not values:
     print("No data found.")
     exit()
 
+# Process rows
 for index, row in enumerate(values, start=2):
 
     try:
@@ -106,6 +113,7 @@ for index, row in enumerate(values, start=2):
 
         print(f"Uploaded to YouTube: {title}")
 
+        # Mark DONE in sheet
         sheet.values().update(
             spreadsheetId=SPREADSHEET_ID,
             range=f"Sheet1!C{index}",
