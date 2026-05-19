@@ -1,5 +1,9 @@
 import os
-import time
+import json
+
+if os.getenv("GOOGLE_CREDENTIALS"):
+    with open("/tmp/credentials.json", "w") as f:
+        f.write(os.getenv("GOOGLE_CREDENTIALS"))
 
 from yt_dlp import YoutubeDL
 
@@ -39,7 +43,7 @@ if not creds or not creds.valid:
 
     else:
         flow = InstalledAppFlow.from_client_secrets_file(
-            'credentials.json',
+            '/tmp/credentials.json',
             SCOPES
         )
 
