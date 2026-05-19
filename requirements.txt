@@ -1,7 +1,13 @@
-pandas
 yt-dlp
 google-auth
 google-auth-oauthlib
 google-auth-httplib2
 google-api-python-client
-openpyxl
+moviepy
+pillow
+imageio
+imageio-ffmpeg
+numpy
+decorator
+proglog
+requests
