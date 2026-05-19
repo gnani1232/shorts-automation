@@ -4,22 +4,19 @@ import random
 
 from yt_dlp import YoutubeDL
 
-from moviepy import (
-    VideoFileClip,
-    TextClip,
-    CompositeVideoClip
-)
-
 from google.oauth2.credentials import Credentials
 from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
 
+from moviepy import *
+from PIL import Image, ImageDraw, ImageFont
+
 print("SCRIPT STARTED")
 
-# ==========================================
-# GOOGLE TOKEN FROM RAILWAY VARIABLE
-# ==========================================
+# =========================
+# GOOGLE TOKEN FROM RAILWAY
+# =========================
 
 SCOPES = [
     'https://www.googleapis.com/auth/spreadsheets',
@@ -37,78 +34,50 @@ creds = Credentials.from_authorized_user_file(
     SCOPES
 )
 
+print("CREDENTIALS LOADED")
+
 if creds.expired and creds.refresh_token:
     creds.refresh(Request())
     print("TOKEN REFRESHED")
 
-print("GOOGLE LOGIN SUCCESS")
-
-# ==========================================
-# GOOGLE SHEETS CONFIG
-# ==========================================
+# =========================
+# GOOGLE SHEET CONFIG
+# =========================
 
 SPREADSHEET_ID = "1tUIsTtA8ZzvXNCFSXzOuCIqV8iofKvIRvPguJyjdHLM"
 RANGE_NAME = "Sheet1!A2:C"
 
-# ==========================================
+# =========================
 # DOWNLOAD FOLDER
-# ==========================================
+# =========================
 
 DOWNLOAD_FOLDER = "downloads"
 
 if not os.path.exists(DOWNLOAD_FOLDER):
     os.makedirs(DOWNLOAD_FOLDER)
 
-# ==========================================
+print("DOWNLOAD FOLDER READY")
+
+# =========================
 # GOOGLE SERVICES
-# ==========================================
+# =========================
 
 sheet_service = build('sheets', 'v4', credentials=creds)
 youtube = build('youtube', 'v3', credentials=creds)
 
 sheet = sheet_service.spreadsheets()
 
-print("GOOGLE SERVICES READY")
+print("GOOGLE SERVICES CONNECTED")
 
-# ==========================================
-# AUTO CAPTIONS
-# ==========================================
-
-caption_templates = [
-    "I wish they stay together forever 😍🔥",
-    "Best couple on internet ❤️✨",
-    "Tell your wishes in comments 🔥",
-    "This moment feels magical 😍",
-    "Internet favorite pair ❤️",
-    "Pure happiness together 🥺❤️",
-    "Couple goals literally 😍",
-    "Their chemistry is unreal 🔥",
-    "Manifesting this love forever ❤️",
-    "Most wholesome video today 😭❤️"
-]
-
-hashtags_pool = [
-    "#shorts",
-    "#viral",
-    "#couple",
-    "#love",
-    "#trending",
-    "#instagram",
-    "#reels",
-    "#ytshorts",
-    "#romantic",
-    "#viralshorts"
-]
-
-# ==========================================
+# =========================
 # MAIN LOOP
-# ==========================================
+# =========================
 
 while True:
 
-    print("CHECKING GOOGLE SHEET...")
-
     try:
+
+        print("CHECKING SHEET FOR NEW VIDEOS...")
 
         result = sheet.values().get(
             spreadsheetId=SPREADSHEET_ID,
@@ -117,36 +86,43 @@ while True:
 
         values = result.get('values', [])
 
+        print(values)
+
         if not values:
             print("NO DATA FOUND")
-            time.sleep(1500)
+            time.sleep(300)
             continue
 
-        # ==========================================
+        # =========================
         # PROCESS ROWS
-        # ==========================================
+        # =========================
 
         for index, row in enumerate(values, start=2):
 
             try:
 
+                print(f"PROCESSING ROW {index}")
+
+                if len(row) < 3:
+                    print("ROW INCOMPLETE")
+                    continue
+
                 reel_url = row[0]
                 title = row[1]
                 status = row[2]
 
-                print(f"PROCESSING: {title}")
+                print(f"TITLE: {title}")
+                print(f"STATUS: {status}")
 
                 if status.upper() == "DONE":
-                    print("ALREADY DONE")
+                    print("SKIPPED DONE ROW")
                     continue
-
-                # ==========================================
-                # DOWNLOAD VIDEO
-                # ==========================================
 
                 safe_title = title.replace("/", "_").replace("\\", "_")
 
                 original_video = f"{DOWNLOAD_FOLDER}/{safe_title}.mp4"
+
+                print("DOWNLOADING VIDEO...")
 
                 ydl_opts = {
                     'outtmpl': original_video,
@@ -158,38 +134,113 @@ while True:
 
                 print("VIDEO DOWNLOADED")
 
-                # ==========================================
-                # GENERATE AUTO TEXT
-                # ==========================================
+                # =========================
+                # SKIP LARGE VIDEOS
+                # =========================
 
-                random_caption = random.choice(caption_templates)
+                if os.path.getsize(original_video) > 50000000:
+                    print("VIDEO TOO LARGE, SKIPPING")
+                    continue
 
-                random_hashtags = " ".join(
-                    random.sample(hashtags_pool, 5)
-                )
-
-                full_caption = f"{random_caption}\n\n{random_hashtags}"
-
-                # ==========================================
-                # ADD TEXT TO VIDEO
-                # ==========================================
+                # =========================
+                # VIDEO EDITING
+                # =========================
 
                 clip = VideoFileClip(original_video)
 
-                text_clip = TextClip(
-                    text=random_caption,
-                    font_size=60,
-                    color='yellow',
-                    stroke_color='black',
-                    stroke_width=3,
-                    method='caption',
-                    size=(900, None)
+                w, h = clip.size
+
+                title_lower = title.lower()
+
+                text_options = []
+
+                if "prabhas" in title_lower:
+                    text_options = [
+                        "REBEL STAR PRABHAS 🔥",
+                        "BAHUBALI HERO 😍",
+                        "BOX OFFICE KING 💥"
+                    ]
+
+                elif "ram charan" in title_lower:
+                    text_options = [
+                        "GLOBAL STAR RAM CHARAN 🔥",
+                        "MEGA POWER HERO 😍",
+                        "PEDDI BLOCKBUSTER 💥"
+                    ]
+
+                elif "mahesh" in title_lower:
+                    text_options = [
+                        "SUPER STAR MAHESH BABU 🔥",
+                        "TELUGU KING 😍",
+                        "GOOSEBUMPS ENTRY 💥"
+                    ]
+
+                elif "ntr" in title_lower:
+                    text_options = [
+                        "MAN OF MASSES NTR 🔥",
+                        "RRR HERO 😍",
+                        "BOX OFFICE BLAST 💥"
+                    ]
+
+                elif "allu arjun" in title_lower:
+                    text_options = [
+                        "ICON STAR ALLU ARJUN 🔥",
+                        "PUSHPA RULE 😍",
+                        "NATIONAL CRUSH HERO 💥"
+                    ]
+
+                else:
+                    text_options = [
+                        title.upper(),
+                        "BLOCKBUSTER FEEL 🔥",
+                        "FANS CELEBRATION 😍"
+                    ]
+
+                final_text = "\n".join(text_options)
+
+                # =========================
+                # CREATE YELLOW TEXT BOX
+                # =========================
+
+                img = Image.new("RGBA", (w, 220), (255, 230, 0, 235))
+
+                draw = ImageDraw.Draw(img)
+
+                font = ImageFont.truetype("DejaVuSans-Bold.ttf", 45)
+
+                bbox = draw.multiline_textbbox(
+                    (0, 0),
+                    final_text,
+                    font=font
                 )
 
+                text_width = bbox[2] - bbox[0]
+                text_height = bbox[3] - bbox[1]
+
+                x = (w - text_width) / 2
+                y = (220 - text_height) / 2
+
+                draw.multiline_text(
+                    (x, y),
+                    final_text,
+                    font=font,
+                    fill="black",
+                    align="center",
+                    spacing=10
+                )
+
+                yellow_box_path = f"{DOWNLOAD_FOLDER}/textbox.png"
+
+                img.save(yellow_box_path)
+
+                # =========================
+                # ADD TEXT BOX TO VIDEO
+                # =========================
+
                 text_clip = (
-                    text_clip
-                    .with_position(("center", 900))
-                    .with_duration(clip.duration)
+                    ImageClip(yellow_box_path)
+                    .set_duration(clip.duration)
+                    .set_position(("center", h * 0.35))
                 )
 
                 final_video = CompositeVideoClip([
@@ -199,23 +250,36 @@ while True:
 
                 edited_video = f"{DOWNLOAD_FOLDER}/edited_{safe_title}.mp4"
 
+                print("RENDERING VIDEO...")
+
                 final_video.write_videofile(
                     edited_video,
                     codec="libx264",
-                    audio_codec="aac"
+                    audio_codec="aac",
+                    preset="ultrafast",
+                    threads=2,
+                    bitrate="2000k",
+                    fps=24
                 )
 
-                print("TEXT ADDED TO VIDEO")
+                print("TEXT ADDED SUCCESSFULLY")
 
-                # ==========================================
-                # UPLOAD TO YOUTUBE
-                # ==========================================
+                # =========================
+                # YOUTUBE UPLOAD
+                # =========================
+
+                hashtags = "#shorts #viral #trending #tollywood"
 
                 request_body = {
                     "snippet": {
                         "title": title,
-                        "description": full_caption,
-                        "tags": hashtags_pool,
+                        "description": hashtags,
+                        "tags": [
+                            "shorts",
+                            "viral",
+                            "tollywood",
+                            "trending"
+                        ],
                         "categoryId": "24"
                     },
                     "status": {
@@ -232,11 +296,11 @@ while True:
                     media_body=media
                 ).execute()
 
-                print("UPLOADED TO YOUTUBE")
+                print(f"UPLOADED TO YOUTUBE: {title}")
 
-                # ==========================================
+                # =========================
                 # MARK DONE
-                # ==========================================
+                # =========================
 
                 sheet.values().update(
                     spreadsheetId=SPREADSHEET_ID,
@@ -249,25 +313,33 @@ while True:
 
                 print("MARKED DONE")
 
-                # ==========================================
+                # =========================
                 # DELETE FILES
-                # ==========================================
+                # =========================
 
-                os.remove(original_video)
-                os.remove(edited_video)
+                try:
+                    os.remove(original_video)
+                    os.remove(edited_video)
+                    os.remove(yellow_box_path)
+                    print("FILES DELETED")
+                except:
+                    pass
 
-                print("FILES DELETED")
+                # =========================
+                # WAIT 25 MINUTES
+                # =========================
 
-                time.sleep(5)
+                print("WAITING 25 MINUTES BEFORE NEXT VIDEO...")
+                time.sleep(1500)
 
             except Exception as e:
-                print(f"ERROR IN ROW {index}: {e}")
+                print(f"ERROR PROCESSING ROW {index}: {e}")
 
         print("ALL ROWS COMPLETED")
-        print("WAITING 25 MINUTES...")
+        print("WAITING 5 MINUTES...")
 
-        time.sleep(1500)
+        time.sleep(300)
 
-    except Exception as main_error:
-        print(f"MAIN ERROR: {main_error}")
+    except Exception as e:
+        print(f"MAIN LOOP ERROR: {e}")
         time.sleep(300)
