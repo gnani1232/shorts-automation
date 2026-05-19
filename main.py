@@ -1,5 +1,6 @@
 import os
 import time
+import random
 
 from yt_dlp import YoutubeDL
 
@@ -7,6 +8,8 @@ from google.oauth2.credentials import Credentials
 from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
+
+from moviepy.editor import *
 
 print("SCRIPT STARTED")
 
@@ -69,6 +72,80 @@ sheet = sheet_service.spreadsheets()
 print("GOOGLE SERVICES CONNECTED")
 
 # =========================
+# AUTO TEXT GENERATOR
+# =========================
+
+def generate_hook(title):
+
+    hooks = [
+        f"{title} 😍",
+        f"Can't stop watching this ❤️",
+        f"Beautiful moments forever ✨",
+        f"Fans are loving this 🔥",
+        f"Pure happiness 🥺❤️",
+        f"This looks straight out of a movie 😍",
+        f"Couple goals forever 💕",
+        f"Internet is obsessed with this ✨"
+    ]
+
+    return random.choice(hooks)
+
+# =========================
+# VIDEO TEXT OVERLAY
+# =========================
+
+def add_text_overlay(input_video, output_video, title):
+
+    clip = VideoFileClip(input_video)
+
+    hook_text = generate_hook(title)
+
+    bottom_text = random.choice([
+        "Comment your thoughts 🔥",
+        "What do you think? ❤️",
+        "Drop your reaction 😍",
+        "Fans are going crazy 🔥",
+        "Would you watch this again? 👀"
+    ])
+
+    # MAIN TEXT
+    text1 = TextClip(
+        hook_text,
+        fontsize=60,
+        color='yellow',
+        stroke_color='black',
+        stroke_width=3,
+        font='Arial-Bold',
+        method='caption',
+        size=(900, None)
+    )
+
+    # Slightly below middle
+    text1 = text1.set_position(("center", 850)).set_duration(clip.duration)
+
+    # SECOND TEXT
+    text2 = TextClip(
+        bottom_text,
+        fontsize=45,
+        color='white',
+        stroke_color='black',
+        stroke_width=2,
+        font='Arial-Bold',
+        method='caption',
+        size=(900, None)
+    )
+
+    text2 = text2.set_position(("center", 940)).set_duration(clip.duration)
+
+    final = CompositeVideoClip([clip, text1, text2])
+
+    final.write_videofile(
+        output_video,
+        codec="libx264",
+        audio_codec="aac"
+    )
+
+# =========================
 # MAIN BOT LOOP
 # =========================
 
@@ -120,7 +197,7 @@ while True:
                     continue
 
                 # =========================
-                # AUTO HASHTAGS FROM TITLE
+                # AUTO HASHTAGS
                 # =========================
 
                 hashtags = title.lower().split()
@@ -181,6 +258,20 @@ while True:
                 print(f"DOWNLOADED: {title}")
 
                 # =========================
+                # ADD TEXT OVERLAY
+                # =========================
+
+                edited_video = f"{DOWNLOAD_FOLDER}/edited_{safe_title}.mp4"
+
+                add_text_overlay(
+                    video_file,
+                    edited_video,
+                    title
+                )
+
+                print("TEXT OVERLAY ADDED")
+
+                # =========================
                 # YOUTUBE UPLOAD
                 # =========================
 
@@ -197,7 +288,7 @@ while True:
                     }
                 }
 
-                media = MediaFileUpload(video_file)
+                media = MediaFileUpload(edited_video)
 
                 youtube.videos().insert(
                     part="snippet,status",
@@ -223,12 +314,16 @@ while True:
                 print(f"MARKED DONE: {title}")
 
                 # =========================
-                # DELETE VIDEO AFTER UPLOAD
+                # DELETE FILES
                 # =========================
 
                 if os.path.exists(video_file):
                     os.remove(video_file)
-                    print("VIDEO FILE DELETED")
+
+                if os.path.exists(edited_video):
+                    os.remove(edited_video)
+
+                print("VIDEO FILES DELETED")
 
                 time.sleep(5)
 
