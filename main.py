@@ -8,6 +8,8 @@ from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
 
+print("SCRIPT STARTED")
+
 # =========================
 # GOOGLE TOKEN FROM RAILWAY
 # =========================
@@ -22,15 +24,20 @@ if os.getenv("GOOGLE_TOKEN"):
     with open("/tmp/token.json", "w") as f:
         f.write(os.getenv("GOOGLE_TOKEN"))
 
+print("TOKEN FILE CREATED")
+
 # Load credentials
 creds = Credentials.from_authorized_user_file(
     "/tmp/token.json",
     SCOPES
 )
 
+print("CREDENTIALS LOADED")
+
 # Refresh token if expired
 if creds.expired and creds.refresh_token:
     creds.refresh(Request())
+    print("TOKEN REFRESHED")
 
 # =========================
 # GOOGLE SHEET CONFIG
@@ -48,6 +55,8 @@ DOWNLOAD_FOLDER = "downloads"
 if not os.path.exists(DOWNLOAD_FOLDER):
     os.makedirs(DOWNLOAD_FOLDER)
 
+print("DOWNLOAD FOLDER READY")
+
 # =========================
 # GOOGLE SERVICES
 # =========================
@@ -56,6 +65,8 @@ sheet_service = build('sheets', 'v4', credentials=creds)
 youtube = build('youtube', 'v3', credentials=creds)
 
 sheet = sheet_service.spreadsheets()
+
+print("GOOGLE SERVICES CONNECTED")
 
 # =========================
 # READ GOOGLE SHEET
@@ -68,8 +79,11 @@ result = sheet.values().get(
 
 values = result.get('values', [])
 
+print("SHEET VALUES:")
+print(values)
+
 if not values:
-    print("No data found.")
+    print("NO DATA FOUND")
     exit()
 
 # =========================
@@ -80,15 +94,21 @@ for index, row in enumerate(values, start=2):
 
     try:
 
+        print(f"PROCESSING ROW {index}")
+
         reel_url = row[0]
         title = row[1]
         status = row[2]
 
+        print(f"TITLE: {title}")
+        print(f"STATUS: {status}")
+
         # Skip completed rows
         if status.upper() == "DONE":
+            print("SKIPPED DONE ROW")
             continue
 
-        print(f"Downloading: {title}")
+        print(f"DOWNLOADING: {title}")
 
         # =========================
         # DOWNLOAD VIDEO
@@ -106,7 +126,7 @@ for index, row in enumerate(values, start=2):
         with YoutubeDL(ydl_opts) as ydl:
             ydl.download([reel_url])
 
-        print(f"Downloaded: {title}")
+        print(f"DOWNLOADED: {title}")
 
         # =========================
         # UPLOAD TO YOUTUBE
@@ -132,7 +152,7 @@ for index, row in enumerate(values, start=2):
             media_body=media
         ).execute()
 
-        print(f"Uploaded to YouTube: {title}")
+        print(f"UPLOADED TO YOUTUBE: {title}")
 
         # =========================
         # MARK DONE IN SHEET
@@ -147,9 +167,9 @@ for index, row in enumerate(values, start=2):
             }
         ).execute()
 
-        print(f"Marked DONE: {title}")
+        print(f"MARKED DONE: {title}")
 
         time.sleep(3)
 
     except Exception as e:
-        print(f"Error processing row {index}: {e}")
+        print(f"ERROR PROCESSING ROW {index}: {e}")
