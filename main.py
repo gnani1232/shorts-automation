@@ -35,7 +35,7 @@ if os.path.exists('token.json'):
     creds = Credentials.from_authorized_user_file('token.json', SCOPES)
 else:
     flow = InstalledAppFlow.from_client_secrets_file(
-        'credentials.json',
+        '/tmp/credentials.json',
         SCOPES
     )
 
