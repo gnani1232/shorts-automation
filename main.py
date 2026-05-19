@@ -213,4 +213,4 @@ while True:
         print(f"MAIN LOOP ERROR: {e}")
 
     print("WAITING 5 MINUTES...")
-    time.sleep(300)
+    time.sleep(1500)
