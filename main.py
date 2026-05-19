@@ -331,7 +331,7 @@ while True:
                 # =========================
 
                 print("WAITING 25 MINUTES BEFORE NEXT VIDEO...")
-                time.sleep(1500)
+                time.sleep(600)
 
             except Exception as e:
                 print(f"ERROR PROCESSING ROW {index}: {e}")
