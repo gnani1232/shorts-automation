@@ -146,13 +146,15 @@ def create_yellow_strip(text_lines, width):
 
     draw = ImageDraw.Draw(img)
 
+    
     try:
         font = ImageFont.truetype(
-            "arial.ttf",
-            170
-        )
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+        170
+    )
     except:
         font = ImageFont.load_default()
+
 
     bbox = draw.multiline_textbbox(
         (0, 0),
