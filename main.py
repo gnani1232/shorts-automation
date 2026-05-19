@@ -69,111 +69,148 @@ sheet = sheet_service.spreadsheets()
 print("GOOGLE SERVICES CONNECTED")
 
 # =========================
-# READ GOOGLE SHEET
+# MAIN BOT LOOP
 # =========================
 
-result = sheet.values().get(
-    spreadsheetId=SPREADSHEET_ID,
-    range=RANGE_NAME
-).execute()
-
-values = result.get('values', [])
-
-print("SHEET VALUES:")
-print(values)
-
-if not values:
-    print("NO DATA FOUND")
-    exit()
-
-# =========================
-# PROCESS EACH ROW
-# =========================
-
-for index, row in enumerate(values, start=2):
+while True:
 
     try:
 
-        print(f"PROCESSING ROW {index}")
+        print("CHECKING SHEET...")
 
-        reel_url = row[0]
-        title = row[1]
-        status = row[2]
+        result = sheet.values().get(
+            spreadsheetId=SPREADSHEET_ID,
+            range=RANGE_NAME
+        ).execute()
 
-        print(f"TITLE: {title}")
-        print(f"STATUS: {status}")
+        values = result.get('values', [])
 
-        # Skip completed rows
-        if status.upper() == "DONE":
-            print("SKIPPED DONE ROW")
+        print("SHEET VALUES:")
+        print(values)
+
+        if not values:
+            print("NO DATA FOUND")
+            time.sleep(60)
             continue
 
-        print(f"DOWNLOADING: {title}")
-
         # =========================
-        # DOWNLOAD VIDEO
+        # PROCESS EACH ROW
         # =========================
 
-        safe_title = title.replace("/", "_").replace("\\", "_")
+        for index, row in enumerate(values, start=2):
 
-        video_file = f"{DOWNLOAD_FOLDER}/{safe_title}.mp4"
+            try:
 
-        ydl_opts = {
-            'outtmpl': video_file,
-            'format': 'mp4'
-        }
+                print(f"PROCESSING ROW {index}")
 
-        with YoutubeDL(ydl_opts) as ydl:
-            ydl.download([reel_url])
+                if len(row) < 3:
+                    print("ROW DOES NOT HAVE 3 COLUMNS")
+                    continue
 
-        print(f"DOWNLOADED: {title}")
+                reel_url = row[0]
+                title = row[1]
+                status = row[2]
 
-        # =========================
-        # UPLOAD TO YOUTUBE
-        # =========================
+                print(f"TITLE: {title}")
+                print(f"STATUS: {status}")
 
-        request_body = {
-            "snippet": {
-                "title": title,
-                "description": "#shorts",
-                "tags": ["shorts"],
-                "categoryId": "24"
-            },
-            "status": {
-                "privacyStatus": "public"
-            }
-        }
+                # Skip completed rows
+                if status.upper() == "DONE":
+                    print("SKIPPED DONE ROW")
+                    continue
 
-        media = MediaFileUpload(video_file)
+                print(f"DOWNLOADING: {title}")
 
-        youtube.videos().insert(
-            part="snippet,status",
-            body=request_body,
-            media_body=media
-        ).execute()
+                # =========================
+                # SAFE FILE NAME
+                # =========================
 
-        print(f"UPLOADED TO YOUTUBE: {title}")
+                safe_title = (
+                    title.replace("/", "_")
+                    .replace("\\", "_")
+                    .replace(":", "_")
+                    .replace("*", "_")
+                    .replace("?", "_")
+                    .replace('"', "_")
+                    .replace("<", "_")
+                    .replace(">", "_")
+                    .replace("|", "_")
+                )
 
-        # =========================
-        # MARK DONE IN SHEET
-        # =========================
+                video_file = f"{DOWNLOAD_FOLDER}/{safe_title}.mp4"
 
-        sheet.values().update(
-            spreadsheetId=SPREADSHEET_ID,
-            range=f"Sheet1!C{index}",
-            valueInputOption="RAW",
-            body={
-                "values": [["DONE"]]
-            }
-        ).execute()
+                # =========================
+                # DOWNLOAD VIDEO
+                # =========================
 
-        print(f"MARKED DONE: {title}")
+                ydl_opts = {
+                    'outtmpl': video_file,
+                    'format': 'mp4'
+                }
 
-        time.sleep(3)
+                with YoutubeDL(ydl_opts) as ydl:
+                    ydl.download([reel_url])
+
+                print(f"DOWNLOADED: {title}")
+
+                # =========================
+                # UPLOAD TO YOUTUBE
+                # =========================
+
+                request_body = {
+                    "snippet": {
+                        "title": title,
+                        "description": "#shorts",
+                        "tags": ["shorts"],
+                        "categoryId": "24"
+                    },
+                    "status": {
+                        "privacyStatus": "public"
+                    }
+                }
+
+                media = MediaFileUpload(video_file)
+
+                youtube.videos().insert(
+                    part="snippet,status",
+                    body=request_body,
+                    media_body=media
+                ).execute()
+
+                print(f"UPLOADED TO YOUTUBE: {title}")
+
+                # =========================
+                # MARK DONE IN SHEET
+                # =========================
+
+                sheet.values().update(
+                    spreadsheetId=SPREADSHEET_ID,
+                    range=f"Sheet1!C{index}",
+                    valueInputOption="RAW",
+                    body={
+                        "values": [["DONE"]]
+                    }
+                ).execute()
+
+                print(f"MARKED DONE: {title}")
+
+                # =========================
+                # DELETE FILE AFTER UPLOAD
+                # =========================
+
+                if os.path.exists(video_file):
+                    os.remove(video_file)
+                    print("VIDEO FILE DELETED")
+
+                time.sleep(5)
+
+            except Exception as e:
+                print(f"ERROR PROCESSING ROW {index}: {e}")
+
+        print("ALL ROWS COMPLETED")
 
     except Exception as e:
-        print(f"ERROR PROCESSING ROW {index}: {e}")
+        print(f"MAIN LOOP ERROR: {e}")
 
-    while True:
-        print("BOT RUNNING...")
-        time.sleep(300)
+    print("WAITING 5 MINUTES...")
+    time.sleep(300)
